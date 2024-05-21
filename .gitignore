@@ -1,3 +1,4 @@
 streamlit-env/
 .env
 .venv
+__pycache__/
