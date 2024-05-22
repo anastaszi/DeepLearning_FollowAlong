@@ -1,4 +1,5 @@
-{"models": [
+{
+    "models": [
     {
         "name": "Updated GPT 3.5 Turbo", 
         "model": "gpt-3.5-turbo-0125"
