@@ -6,7 +6,7 @@ from utils.crew_utils import compile_crew
 warnings.filterwarnings("ignore")
 
 ## Session state
-if 'agents' not in st.session_state or 'tasks' not in st.session_state:
+if 'api_key' not in st.session_state:
     st.session_state.agents = []
     st.session_state.tasks = []
     st.session_state.crew = {
@@ -18,9 +18,9 @@ if 'agents' not in st.session_state or 'tasks' not in st.session_state:
     st.session_state.warnings = {
         'no_agents': False,
         'no_tasks': False, 
-        'crew': None
+        'crew': None,
+        'no_pwd': False
     }
-    st.session_state.api_key = ''
     st.session_state.selected_model_name = ''
 
 models = load_json('data/models.json')["models"]
@@ -31,23 +31,29 @@ task_options = [(task['id'], task['name']) for task in st.session_state.tasks]
 
 
 #### UI ####
+def check_pwd(pwd):
+    if pwd and pwd == st.secrets["PASSWORD"]:
+        st.session_state.api_key = st.secrets["OPENAI_API_KEY"]
+        st.session_state.warnings['no_pwd'] = False
+    else:
+        st.session_state.warnings['no_pwd'] = True
 
 ## Sidebar
 with st.sidebar:
-    if not st.session_state.api_key:
-        if not st.secrets:
-            st.session_state.api_key=st.text_input('Enter your OpenAI API key', type='password')
-        elif st.secrets["SCOPE"]=='local' and st.secrets["OPENAI_API_KEY"]:
-            st.session_state.api_key=st.secrets["OPENAI_API_KEY"]
-        else:
-            st.write('You can use your own OpenAI API key')
-            st.session_state.api_key=st.text_input('Enter your OpenAI API key', type='password')
-            st.write("Unless you know a magic word")
+    if st.secrets and 'SCOPE' in st.secrets and st.secrets["SCOPE"]=='local' and 'OPENAI_API_KEY' in st.secrets:
+        st.session_state['api_key']=st.secrets["OPENAI_API_KEY"]
+    elif 'api_key' not in st.session_state:
+        st.write('You can use your own OpenAI API key')
+        st.session_state.api_key=st.text_input('Enter your OpenAI API key', type='password')
+        st.write(st.session_state.api_key)
+        st.write("Unless you know a magic word")
+        c1, c2 = st.columns([3, 1])
+        with c1:
             pwd = st.text_input('Enter your password', type='password', label_visibility="collapsed")
-            if pwd and pwd == st.secrets["PASSWORD"]:
-                st.session_state.api_key = st.secrets["OPENAI_API_KEY"]
-            if pwd and pwd != st.secrets["PASSWORD"]:
-                st.warning('Wrong password')
+        with c2:
+            st.button('🔓', on_click=check_pwd, args=(pwd,), key="unlock")
+            if st.session_state.warnings['no_pwd']:
+                st.warning('Nope, try again')
         st.warning('Please provide your OpenAI API key')
         st.stop()
     selected_model_name = st.selectbox('Select a model', list(name_to_model.keys()))
@@ -63,8 +69,7 @@ with tab1:
     st.write('A crew is a group of agents and tasks that work together to achieve a common goal. It has a verbosity level that determines the amount of information displayed during the crew\'s operation.')
     crew_expander = st.expander('Code example', expanded=False)
     crew_expander.code('''
-        agent1 = Agent(
-            role="Content Planner",
+        agent1 = Agent(\n\trole="Content Planner",
             goal="Plan engaging and factually accurate content on {topic}",
             backstory="You're working on planning a blog article"
             ...
