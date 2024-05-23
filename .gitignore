@@ -2,3 +2,4 @@ streamlit-env/
 .env
 .venv
 __pycache__/
+.streamlit/secrets.toml

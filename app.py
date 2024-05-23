@@ -1,6 +1,5 @@
 import streamlit as st
 import warnings
-import os
 from utils.ui_utils import load_json, add_agent, add_tasks, remove_agent, remove_task, add_variable, remove_variable, fill_example_data, attach_agents, attach_tasks, deattach_agent, deattach_task
 from utils.crew_utils import compile_crew
 
@@ -34,11 +33,21 @@ task_options = [(task['id'], task['name']) for task in st.session_state.tasks]
 
 ## Sidebar
 with st.sidebar:
-    if not os.environ.get("OPENAI_API_KEY"):
-        st.session_state.ai_key=st.text_input('Enter your OpenAI API key', type='password')
+    
+    if not st.secrets:
+        st.session_state.api_key=st.text_input('Enter your OpenAI API key', type='password')
+    elif st.secrets["SCOPE"]=='local' and st.secrets["OPENAI_API_KEY"]:
+        st.session_state.api_key=st.secrets["OPENAI_API_KEY"]
     else:
-        st.session_state.ai_key= os.environ.get("OPENAI_API_KEY")
-    if not st.session_state.ai_key:
+        st.write('You can use your own OpenAI API key')
+        st.session_state.api_key=st.text_input('Enter your OpenAI API key', type='password')
+        st.write("Unless you know a magic word")
+        pwd = st.text_input('Enter your password', type='password')
+        if pwd and pwd == st.secrets["PASSWORD"]:
+            st.session_state.api_key = st.secrets["OPENAI_API_KEY"]
+        if pwd and pwd != st.secrets["PASSWORD"]:
+            st.warning('Wrong password')
+    if not st.session_state.api_key:
         st.warning('Please add your OpenAI API key to environment variables.')
         st.stop()
     selected_model_name = st.selectbox('Select a model', list(name_to_model.keys()))

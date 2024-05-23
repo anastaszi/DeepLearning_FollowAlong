@@ -13,17 +13,12 @@ Check out the configuration reference at https://huggingface.co/docs/hub/spaces-
 To run the app localy, follow the instrucctions below.
 1. Install python 12.0 or higher
 
-2. Set up OpenAI API key
+2. Set up streamlit secret OpenAI API key
 ```
-echo "export OPENAI_API_KEY='yourkey'" >> ~/.zshrc
-```
-2. Update the shell with the new variable:
-```
-source ~/.zshrc
-```
-2. Confirm that you have set your environment variable using the following command. 
-```
-echo $OPENAI_API_KEY
+mkdir .streamlit
+touch .streamlit/secrets.toml
+echo 'SCOPE = "local"' >> .streamlit/secrets.toml
+echo 'OPENAI_API_KEY = "YOUR_API_KEY"' >> .streamlit/secrets.toml
 ```
 2. Create a virtual environment
 ```

@@ -1,11 +1,11 @@
 import crewai
 from crewai import Agent, Task, Crew
 import langchain_openai
-from langchain_openai import OpenAI
+from langchain_openai import ChatOpenAI
 
 
 def compile_crew(session_data):
-    llm = OpenAI(api_key=session_data.api_key, model_name=session_data.selected_model_name)
+    llm = ChatOpenAI(openai_api_key=session_data.api_key, model=session_data.selected_model_name)
     crew_agents = []
     crew_tasks = []
     for agent_id in session_data.crew['agents']:
@@ -17,7 +17,8 @@ def compile_crew(session_data):
             goal=agent['goal'],
             backstory=agent['backstory'],
             allow_delegation=agent['allow_delegation'],
-            verbose=agent['verbose']
+            verbose=agent['verbose'], 
+            llm=llm
         )})
     for task_id in session_data.crew['tasks']:
         task = next((task for task in session_data.tasks if task['id'] == task_id), None)
