@@ -28,6 +28,10 @@ def compile_crew(session_data):
             expected_output=task['expected_output'],
             agent=task_agent['agent']
         ))
+    if len(crew_agents) == 0 or len(crew_tasks) == 0:
+        session_data.warnings['crew'] = 'Crew must have at least one agent and one task.'
+        return
+    session_data.warnings['crew'] = None
     crew = Crew(
         agents=[agent['agent'] for agent in crew_agents],
         tasks=crew_tasks,

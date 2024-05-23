@@ -17,7 +17,8 @@ if 'agents' not in st.session_state or 'tasks' not in st.session_state:
     st.session_state.variables = []
     st.session_state.warnings = {
         'no_agents': False,
-        'no_tasks': False
+        'no_tasks': False, 
+        'crew': None
     }
     st.session_state.api_key = ''
     st.session_state.selected_model_name = ''
@@ -42,12 +43,12 @@ with st.sidebar:
             st.write('You can use your own OpenAI API key')
             st.session_state.api_key=st.text_input('Enter your OpenAI API key', type='password')
             st.write("Unless you know a magic word")
-            pwd = st.text_input('Enter your password', type='password')
+            pwd = st.text_input('Enter your password', type='password', label_visibility="collapsed")
             if pwd and pwd == st.secrets["PASSWORD"]:
                 st.session_state.api_key = st.secrets["OPENAI_API_KEY"]
             if pwd and pwd != st.secrets["PASSWORD"]:
                 st.warning('Wrong password')
-        st.warning('Please add your OpenAI API key to environment variables.')
+        st.warning('Please provide your OpenAI API key')
         st.stop()
     selected_model_name = st.selectbox('Select a model', list(name_to_model.keys()))
     st.session_state.selected_model_name = name_to_model[selected_model_name]
@@ -130,6 +131,8 @@ with tab1:
         st.session_state.crew['verbose'] = st.slider('Select a level of logging', 0, 2, 2)
 
     st.button('Run crew', on_click=compile_crew, args=(st.session_state, ))
+    if st.session_state.warnings['crew']:
+        st.warning(st.session_state.warnings['crew'])
     if 'results' in st.session_state:
         st.header('Results', divider='rainbow')
         st.markdown(st.session_state.results)
