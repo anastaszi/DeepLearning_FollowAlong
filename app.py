@@ -33,21 +33,20 @@ task_options = [(task['id'], task['name']) for task in st.session_state.tasks]
 
 ## Sidebar
 with st.sidebar:
-    
-    if not st.secrets:
-        st.session_state.api_key=st.text_input('Enter your OpenAI API key', type='password')
-    elif st.secrets["SCOPE"]=='local' and st.secrets["OPENAI_API_KEY"]:
-        st.session_state.api_key=st.secrets["OPENAI_API_KEY"]
-    else:
-        st.write('You can use your own OpenAI API key')
-        st.session_state.api_key=st.text_input('Enter your OpenAI API key', type='password')
-        st.write("Unless you know a magic word")
-        pwd = st.text_input('Enter your password', type='password')
-        if pwd and pwd == st.secrets["PASSWORD"]:
-            st.session_state.api_key = st.secrets["OPENAI_API_KEY"]
-        if pwd and pwd != st.secrets["PASSWORD"]:
-            st.warning('Wrong password')
     if not st.session_state.api_key:
+        if not st.secrets:
+            st.session_state.api_key=st.text_input('Enter your OpenAI API key', type='password')
+        elif st.secrets["SCOPE"]=='local' and st.secrets["OPENAI_API_KEY"]:
+            st.session_state.api_key=st.secrets["OPENAI_API_KEY"]
+        else:
+            st.write('You can use your own OpenAI API key')
+            st.session_state.api_key=st.text_input('Enter your OpenAI API key', type='password')
+            st.write("Unless you know a magic word")
+            pwd = st.text_input('Enter your password', type='password')
+            if pwd and pwd == st.secrets["PASSWORD"]:
+                st.session_state.api_key = st.secrets["OPENAI_API_KEY"]
+            if pwd and pwd != st.secrets["PASSWORD"]:
+                st.warning('Wrong password')
         st.warning('Please add your OpenAI API key to environment variables.')
         st.stop()
     selected_model_name = st.selectbox('Select a model', list(name_to_model.keys()))
