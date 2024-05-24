@@ -64,7 +64,7 @@ def get_api_key(provider):
             st.button('🔓', on_click=check_pwd, args=(pwd,provider_lower), key="unlock")
             if st.session_state.warnings['no_pwd']:
                 st.warning('Nope, try again')
-        st.warning('Please provide your OpenAI API key')
+        st.warning(f'Please provide your {provider} API key')
         st.stop()
 
 ## Sidebar
