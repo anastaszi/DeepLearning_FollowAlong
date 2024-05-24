@@ -2,40 +2,75 @@ import crewai
 from crewai import Agent, Task, Crew
 import langchain_openai
 from langchain_openai import ChatOpenAI
+import langchain_groq
+from langchain_groq import ChatGroq
 
 
-def compile_crew(session_data):
-    llm = ChatOpenAI(openai_api_key=session_data.api_key, model=session_data.selected_model_name)
-    crew_agents = []
-    crew_tasks = []
-    for agent_id in session_data.crew['agents']:
-        agent = next((agent for agent in session_data.agents if agent['id'] == agent_id), None)
-        crew_agents.append({
-            'id': agent['id'],
-            'agent': Agent(
-            role=agent['role'],
-            goal=agent['goal'],
-            backstory=agent['backstory'],
-            allow_delegation=agent['allow_delegation'],
-            verbose=agent['verbose'], 
-            llm=llm
-        )})
-    for task_id in session_data.crew['tasks']:
-        task = next((task for task in session_data.tasks if task['id'] == task_id), None)
-        task_agent = next((agent for agent in crew_agents if agent['id'] == task['agent_id']), None)
-        crew_tasks.append(Task(
-            description=task['description'],
-            expected_output=task['expected_output'],
-            agent=task_agent['agent']
-        ))
-    if len(crew_agents) == 0 or len(crew_tasks) == 0:
-        session_data.warnings['crew'] = 'Crew must have at least one agent and one task.'
-        return
-    session_data.warnings['crew'] = None
-    crew = Crew(
-        agents=[agent['agent'] for agent in crew_agents],
-        tasks=crew_tasks,
-        verbose=session_data.crew['verbose']
-    )
-    session_data.results = crew.kickoff(inputs={variable['name']: variable['value'] for variable in session_data.variables})
-    return
+
+class CustomCrew:
+    def __init__(self, 
+                 api_key, 
+                 model_name,
+                 provider, 
+                 all_agents, 
+                 crew_agents, 
+                 all_tasks, 
+                 crew_tasks, 
+                 variables, 
+                 verbose, 
+                 logging_callback=None
+                 ):
+        self.llm = self.__choose_llm(provider, api_key, model_name)
+        self.agents = self.__add_agents(all_agents, crew_agents)
+        self.tasks = self.__add_tasks(all_tasks, crew_tasks)
+        self.variables = self.__add_variables(variables)
+        self.verbose = verbose
+        self.logging_callback = logging_callback
+
+    def __choose_llm(self, provider, api_key, model_name):
+        if provider.lower() == 'openai':
+            return ChatOpenAI(openai_api_key=api_key, model=model_name)
+        elif provider.lower() == 'groq':
+            return ChatGroq(groq_api_key=api_key, model_name=model_name)
+
+    def __add_agents(self, all_agents, crew_agents):
+        agents_objs = []
+        for agent_id in crew_agents:
+            agent = next((agent for agent in all_agents if agent['id'] == agent_id), None)
+            agents_objs .append({
+                'id': agent['id'],
+                'agent': Agent(
+                role=agent['role'],
+                goal=agent['goal'],
+                backstory=agent['backstory'],
+                allow_delegation=agent['allow_delegation'],
+                verbose=agent['verbose'], 
+                llm=self.llm,
+            )})
+        return agents_objs 
+    
+    def __add_tasks(self, all_tasks, crew_tasks):
+        tasks_objs = []
+        for task_id in crew_tasks:
+            task = next((task for task in all_tasks if task['id'] == task_id), None)
+            task_agent = next((agent for agent in self.agents if agent['id'] == task['agent_id']), None)
+            tasks_objs.append(Task(
+                description=task['description'],
+                expected_output=task['expected_output'],
+                agent=task_agent['agent']
+            ))
+        return tasks_objs
+    
+    def __add_variables(self, variables):
+        return {variable['name']: variable['value'] for variable in variables}
+        
+    def run(self):
+        crew = Crew(
+            agents=[agent['agent'] for agent in self.agents],
+            tasks=self.tasks,
+            verbose=self.verbose, 
+            step_callback=self.logging_callback
+        )
+        results = crew.kickoff(inputs=self.variables)
+        return results
+

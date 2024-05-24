@@ -1,12 +1,12 @@
 import streamlit as st
 import warnings
 from utils.ui_utils import load_json, add_agent, add_tasks, remove_agent, remove_task, add_variable, remove_variable, fill_example_data, attach_agents, attach_tasks, deattach_agent, deattach_task
-from utils.crew_utils import compile_crew
+from utils.crew_utils import CustomCrew
 
 warnings.filterwarnings("ignore")
-
+st.set_page_config(page_icon="✨", layout="wide")
 ## Session state
-if 'api_key' not in st.session_state:
+if 'agents' not in st.session_state:
     st.session_state.agents = []
     st.session_state.tasks = []
     st.session_state.crew = {
@@ -22,42 +22,57 @@ if 'api_key' not in st.session_state:
         'no_pwd': False
     }
     st.session_state.selected_model_name = ''
+    st.session_state.progress = 1
+    st.provider = ''
 
 models = load_json('data/models.json')["models"]
 
-name_to_model = {model["name"]: model["model"] for model in models}
+name_to_model = {f'{model["provider"]}: {model["name"]}': {"model": model["model"], "provider": model["provider"]} for model in models}
 agent_options = [(agent['id'], agent['name']) for agent in st.session_state.agents]
 task_options = [(task['id'], task['name']) for task in st.session_state.tasks]
 
 
+
+def streamlit_callback(output):
+    st.session_state.progress += 1
+    st.toast(f'Agent #{st.session_state.progress} finished the task', icon="🚀")
+
 #### UI ####
-def check_pwd(pwd):
+def check_pwd(pwd, provider):
     if pwd and pwd == st.secrets["PASSWORD"]:
-        st.session_state.api_key = st.secrets["OPENAI_API_KEY"]
+        st.session_state[f'{provider}_api_key'] = st.secrets[f'{provider.upper()}_API_KEY']
         st.session_state.warnings['no_pwd'] = False
     else:
         st.session_state.warnings['no_pwd'] = True
 
-## Sidebar
-with st.sidebar:
-    if st.secrets and 'SCOPE' in st.secrets and st.secrets["SCOPE"]=='local' and 'OPENAI_API_KEY' in st.secrets:
-        st.session_state['api_key']=st.secrets["OPENAI_API_KEY"]
-    elif 'api_key' not in st.session_state:
-        st.write('You can use your own OpenAI API key')
-        st.session_state.api_key=st.text_input('Enter your OpenAI API key', type='password')
-        st.write(st.session_state.api_key)
+def update_api_key(provider):
+        st.session_state[f'{provider}_api_key'] = st.session_state.api_key_input
+
+def get_api_key(provider):
+    provider_lower = provider.lower()
+    provider_upper = provider.upper()
+    if st.secrets and 'SCOPE' in st.secrets and st.secrets["SCOPE"]=='local' and f'{provider_upper}_API_KEY' in st.secrets:
+        st.session_state[f'{provider_lower}_api_key']=st.secrets[f'{provider_upper}_API_KEY']
+    elif f'{provider_lower}_api_key' not in st.session_state:
+        st.write(f'You can use your own {provider} API key')
+        st.text_input(f'Enter your {provider}  API key', type='password', key='api_key_input', on_change=update_api_key, label_visibility="collapsed", args=(provider_lower,))
         st.write("Unless you know a magic word")
         c1, c2 = st.columns([3, 1])
         with c1:
             pwd = st.text_input('Enter your password', type='password', label_visibility="collapsed")
         with c2:
-            st.button('🔓', on_click=check_pwd, args=(pwd,), key="unlock")
+            st.button('🔓', on_click=check_pwd, args=(pwd,provider_lower), key="unlock")
             if st.session_state.warnings['no_pwd']:
                 st.warning('Nope, try again')
         st.warning('Please provide your OpenAI API key')
         st.stop()
+
+## Sidebar
+with st.sidebar:
     selected_model_name = st.selectbox('Select a model', list(name_to_model.keys()))
-    st.session_state.selected_model_name = name_to_model[selected_model_name]
+    st.session_state.selected_model_name = name_to_model[selected_model_name]['model']
+    st.session_state.provider = name_to_model[selected_model_name]['provider']
+    get_api_key(st.session_state.provider)
     st.divider()
     st.subheader('Research Example')
     st.button('Fill example data', on_click=fill_example_data, args=(st.session_state,))
@@ -86,7 +101,7 @@ with tab1:
         result = crew.kickoff(inputs={"topic":"AI", "industry": "Tech"}) 
         '''
     )
-    st.info('Tasks will be performed sequentially (i.e they are dependent on each other), so the order of the task in the list matters.', icon="ℹ️")
+    st.info('By default tasks are executed sequentially (i.e they are dependent on each other), so the order of the task in the list matters.', icon="ℹ️")
 
     c1,c2,c3 = st.columns([2,2,1])
     with c1:
@@ -134,8 +149,36 @@ with tab1:
     with c3:
         st.caption('Verbose')
         st.session_state.crew['verbose'] = st.slider('Select a level of logging', 0, 2, 2)
+    
+    def status_text():
+        running_agent = st.session_state.progress + 1
+        total_agents = len(st.session_state.crew['agents'])
+        return f"Running agent {running_agent} of {total_agents}"
 
-    st.button('Run crew', on_click=compile_crew, args=(st.session_state, ))
+    if st.button('Run crew', key="run_crew"):
+        if len(st.session_state.crew['agents']) == 0 or len(st.session_state.crew['tasks']) == 0:
+            st.session_state.warnings['crew'] = 'Crew must have at least one agent and one task.'
+        else:
+            customCrew = CustomCrew(
+                api_key=st.session_state[f'{st.session_state.provider.lower()}_api_key'],
+                model_name=st.session_state.selected_model_name,
+                provider=st.session_state.provider,
+                all_agents=st.session_state.agents,
+                crew_agents=st.session_state.crew['agents'],
+                all_tasks=st.session_state.tasks,
+                crew_tasks=st.session_state.crew['tasks'],
+                variables=st.session_state.variables,
+                verbose=st.session_state.crew['verbose'],
+                logging_callback=streamlit_callback
+            )
+            st.session_state.progress = 0
+            st.session_state.results = ''
+            number_of_agents = len(st.session_state.crew['agents'])
+            with st.status(f'Running {number_of_agents} agents', expanded = True) as status:
+                st.session_state.results = customCrew.run()
+                status.update(label="✅ Done!",
+                        state="complete", expanded=False)
+    
     if st.session_state.warnings['crew']:
         st.warning(st.session_state.warnings['crew'])
     if 'results' in st.session_state:
