@@ -12,12 +12,13 @@ if 'agents' not in st.session_state:
     st.session_state.crew = {
         'agents': [],
         'tasks': [],
-        'verbose': 2
+        'verbose': 2, 
+        'memory': False
     }
     st.session_state.variables = []
     st.session_state.warnings = {
-        'no_agents': False,
-        'no_tasks': False, 
+        'no_agents': True,
+        'no_tasks': True, 
         'crew': None,
         'no_pwd': False
     }
@@ -26,6 +27,7 @@ if 'agents' not in st.session_state:
     st.provider = ''
 
 models = load_json('data/models.json')["models"]
+tools=load_json('data/models.json')["tools"]
 
 name_to_model = {f'{model["provider"]}: {model["name"]}': {"model": model["model"], "provider": model["provider"]} for model in models}
 agent_options = [(agent['id'], agent['name']) for agent in st.session_state.agents]
@@ -84,15 +86,18 @@ with tab1:
     st.write('A crew is a group of agents and tasks that work together to achieve a common goal. It has a verbosity level that determines the amount of information displayed during the crew\'s operation.')
     crew_expander = st.expander('Code example', expanded=False)
     crew_expander.code('''
-        agent1 = Agent(\n\trole="Content Planner",
+        agent1 = Agent(
+            role="Content Planner",
             goal="Plan engaging and factually accurate content on {topic}",
             backstory="You're working on planning a blog article"
             ...
         task1 = Task(
             description="1. Prioritize the latest trends, key players in the {industry} "
-            expected_output="A comprehensive content plan document"
+            expected_output="A comprehensive content plan document", 
+            agent=agent1
             ...
         )
+        ...
         crew=Crew(
             agents=[agent1, agent2, agent3],
             tasks=[task1, task2, task3],
@@ -124,7 +129,8 @@ with tab1:
                 st.session_state.crew['agents'][i] = selected_agent[0]
         if st.session_state.warnings['no_agents']:
             st.warning('You have no agents yet')
-        st.button("Attach agents", on_click=attach_agents, key="attach_agents", args=(st.session_state.agents, st.session_state.crew, st.session_state.warnings,))
+        else:
+            st.button("Attach agents", on_click=attach_agents, key="attach_agents", args=(st.session_state.agents, st.session_state.crew, st.session_state.warnings,))
     with c2:
         st.caption('Tasks')
         for i, task_id in enumerate(st.session_state.crew['tasks']):
@@ -145,10 +151,12 @@ with tab1:
                 st.session_state.crew['tasks'][i] = selected_task[0]
         if st.session_state.warnings['no_tasks']:
             st.warning('You have no tasks yet')
-        st.button("Attach tasks", on_click=attach_tasks, key="attach_tasks", args=(st.session_state.tasks, st.session_state.crew, st.session_state.warnings,))
+        else:
+            st.button("Attach tasks", on_click=attach_tasks, key="attach_tasks", args=(st.session_state.tasks, st.session_state.crew, st.session_state.warnings,))
     with c3:
         st.caption('Verbose')
         st.session_state.crew['verbose'] = st.slider('Select a level of logging', 0, 2, 2)
+        st.session_state.crew['memory'] = st.toggle("Memory", key='memory')#st.checkbox('Memory', key='memory')
     
     def status_text():
         running_agent = st.session_state.progress + 1
@@ -201,7 +209,7 @@ with tab2:
                     "and make informed decisions. "
                     "Your work is the basis for "
                     "the Content Writer to write an article on this topic.,"
-            allow_delegation=False,
+            allow_delegation=False, # (default is True)
             verbose=True'''
     )
 
@@ -215,12 +223,13 @@ with tab2:
             agent['backstory'] = st.text_area('Agent backstory', key=f"backstory_{i}", value=agent['backstory'], placeholder="I am a virtual assistant")
         with c2:
             st.caption('Optional attributes')
-            agent['allow_delegation'] = st.checkbox('Allow delegation', key=f"delegation_{i}", value=agent['allow_delegation'])
-            agent['verbose'] = st.checkbox('Verbose', key=f"verbose_{i}", value=agent['verbose'])
+            if 'allow_delegation' not in agent:
+                agent['allow_delegation'] = True
+            agent['allow_delegation'] = st.toggle('Allow delegation', key=f"delegation_{i}", value=agent['allow_delegation'])
+            agent['verbose'] = st.toggle('Verbose', key=f"verbose_{i}", value=agent['verbose'])
             st.button('➖ Remove agent', on_click=remove_agent, args=(i,st.session_state.agents, ), key=f"remove_{i}")
-    
-    st.button('➕ Add agent', on_click=add_agent, args=(len(st.session_state.agents),st.session_state.agents, st.session_state.warnings, ))
-
+    if st.button('➕ Add agent', on_click=add_agent, args=(len(st.session_state.agents),st.session_state.agents, st.session_state.warnings, )):
+        st.session_state.warnings['no_agents'] = False
 with tab3:
     st.header('Tasks', divider='rainbow')
     st.write('Tasks are the activities that agents perform to achieve their goals. They have descriptions, expected outputs, and are assigned to agents.')
@@ -244,17 +253,15 @@ with tab3:
     )
     '''
     )
-
     for i, task in enumerate(st.session_state.tasks):
         st.subheader(f"Task #{i + 1}")
-        c1, c2 = st.columns([3, 1])
+        c1, c2 = st.columns([2, 1])
         with c1:
             task['name'] = st.text_input('Agent name', key=f"task_name_{i}", value=task['name'], placeholder="TaskName")
             task['description'] = st.text_area('Task description', key=f"task_description_{i}", value=task['description'], placeholder="Task description")
             task['expected_output'] = st.text_area('Expected output', key=f"expected_output_{i}", value=task['expected_output'], placeholder="Expected output")
         with c2:
             selected_agent_index = next((index for index, (agent_id, _) in enumerate(agent_options) if agent_id == task['agent_id']), 0)
-
             task['agent_id'] = st.selectbox(
                 'Select an agent',
                 options=agent_options,
@@ -262,9 +269,17 @@ with tab3:
                 index=selected_agent_index,
                 key=f"task_agent_{i}"
             )[0]
-            #task['agent_id'] = st.selectbox('Select an agent', [agent['name'] for agent in st.session_state.agents], key=f"task_agent_{i}")
+            task['tools'] = st.multiselect('Tools', options=tools, format_func=lambda x: x['name'], key=f"task_tools_{i}")
+            for tool in task['tools']:
+                if 'parameters' in tool:
+                    st.write(f'For {tool["name"]} specify the following parameters:')
+                    for parameter in tool['parameters']:
+                        task[parameter['value']] = st.text_input(parameter['name'], key=f"task_{parameter['name']}_{i}", value=task.get(parameter['name'], ''), placeholder=parameter['description'])
             st.button('➖ Remove task', on_click=remove_task, args=(i,st.session_state.tasks, ), key=f"remove_task_{i}")
-    st.button('➕ Add task', on_click=add_tasks, args=(len(st.session_state.tasks),st.session_state.tasks, st.session_state.warnings,))
+    if st.session_state.warnings['no_agents']:
+        st.warning('Before creating tasks, you need to create agents first.')
+    else:
+        st.button('➕ Add task', on_click=add_tasks, args=(len(st.session_state.tasks),st.session_state.tasks, st.session_state.warnings,))
 
 with tab4:
     st.header('Variables/Inputs', divider='rainbow')

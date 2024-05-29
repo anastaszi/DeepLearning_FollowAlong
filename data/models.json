@@ -15,5 +15,32 @@
         "model": "llama3-70b-8192",
         "provider": "Groq"
     }
+    ],
+    "tools": [
+        {
+            "name":"Google Search", 
+            "description": "A specialized tool for development purposes, with specific functionalities under development.",
+            "id": "serper_dev_tool"
+        },
+        {
+            "name":"Website Search Tool",
+            "description": "A RAG tool for searching website content, optimized for web data extraction.",
+            "id": "website_search_tool"
+        },
+        {
+            "name":"Scrape Website Tool",
+            "description": "A RAG tool for searching website content, optimized for web data extraction.",
+            "id": "scrape_website_tool",
+            "parameters": [
+                {
+                    "name": "Website Url",
+                    "id":"website_url",
+                    "description": "The URL of the website to scrape", 
+                    "type": "string", 
+                    "value": ""
+                }
+            ]
+        }
     ]
+
 }

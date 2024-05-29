@@ -1,6 +1,6 @@
 streamlit
 crewai
-crewai[tools]
+crewai_tools
 langchain_community
 langchain_openai
 langchain-groq

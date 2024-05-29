@@ -28,10 +28,10 @@ def add_agent(index, agents, warnings):
         'role': '',
         'backstory': '',
         'goal': '',
-        'allow_delegation': False,
+        'allow_delegation': True,
         'verbose': True
     })
-    warnings['no_agent'] = False
+    warnings['no_agents'] = False
 
 def remove_agent(index, agents):
     agents.pop(index)
@@ -53,7 +53,8 @@ def add_tasks(index, tasks, warnings):
         'name': f'Task {index + 1}',
         'description': '',
         'expected_output': '',
-        'agent_id': ''
+        'agent_id': '',
+        'tools': []
     })
     warnings['no_tasks'] = False
 
