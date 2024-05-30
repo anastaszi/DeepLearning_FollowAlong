@@ -4,7 +4,9 @@ import langchain_openai
 from langchain_openai import ChatOpenAI
 import langchain_groq
 from langchain_groq import ChatGroq
+from crewai_tools import SerperDevTool,ScrapeWebsiteTool, WebsiteSearchTool
 
+#from crewai_tools import SerperDevTool,ScrapeWebsiteTool, WebsiteSearchTool
 
 
 class CustomCrew:
@@ -54,10 +56,21 @@ class CustomCrew:
         for task_id in crew_tasks:
             task = next((task for task in all_tasks if task['id'] == task_id), None)
             task_agent = next((agent for agent in self.agents if agent['id'] == task['agent_id']), None)
+            tools = []
+            for tool in task['tools']:
+                tool_instance = None
+                if tool['id'] == 'serper_dev_tool':
+                    tool_instance = SerperDevTool()
+                elif tool['id'] == 'scrape_website_tool':
+                    tool_instance = ScrapeWebsiteTool(**{param_id: param_value for param in tool['parameters'] for param_id, param_value in param.items()})
+                elif tool['id'] == 'website_search_tool':
+                    tool_instance = WebsiteSearchTool(**{param_id: param_value for param in tool['parameters'] for param_id, param_value in param.items()})
+                tools.append(tool_instance)
             tasks_objs.append(Task(
                 description=task['description'],
                 expected_output=task['expected_output'],
-                agent=task_agent['agent']
+                agent=task_agent['agent'], 
+                tools=tools
             ))
         return tasks_objs
     

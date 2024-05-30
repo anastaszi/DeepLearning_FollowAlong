@@ -1,16 +1,25 @@
 import json
 import uuid
 
+class CustomAgent:
+    def __init__(self, name, role, backstory, goal, allow_delegation, verbose):
+        self.name = name
+        self.role = role
+        self.backstory = backstory
+        self.goal = goal
+        self.allow_delegation = allow_delegation
+        self.verbose = verbose
+
 def load_json(file_path):
     with open(file_path, 'r') as f:
         return json.load(f)
     return None
 
 ### UI UTILS ###
-def fill_example_data(session_data):
-    research_agents = load_json('data/research_example.json')["agents"]
-    research_tasks = load_json('data/research_example.json')["tasks"]
-    research_variables = load_json('data/research_example.json')["variables"]
+def fill_example_data(session_data, file_path):
+    research_agents = load_json(file_path)["agents"]
+    research_tasks = load_json(file_path)["tasks"]
+    research_variables = load_json(file_path)["variables"]
     if research_agents and isinstance(research_agents, list) and len(research_agents) > 0:
         session_data.agents = research_agents
         session_data.warnings['no_agents'] = False

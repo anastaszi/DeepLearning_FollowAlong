@@ -30,8 +30,12 @@ models = load_json('data/models.json')["models"]
 tools=load_json('data/models.json')["tools"]
 
 name_to_model = {f'{model["provider"]}: {model["name"]}': {"model": model["model"], "provider": model["provider"]} for model in models}
+tool_id_to_tool = {tool['id']: tool for tool in tools}
+tool_id_to_name = {tool['id']: tool['name'] for tool in tools}
+tool_name_to_tool = {tool['name']: tool for tool in tools}
 agent_options = [(agent['id'], agent['name']) for agent in st.session_state.agents]
 task_options = [(task['id'], task['name']) for task in st.session_state.tasks]
+
 
 
 
@@ -77,7 +81,10 @@ with st.sidebar:
     get_api_key(st.session_state.provider)
     st.divider()
     st.subheader('Research Example')
-    st.button('Fill example data', on_click=fill_example_data, args=(st.session_state,))
+    st.button('Fill research data', on_click=fill_example_data, args=(st.session_state,'data/research_example.json',), key="fill_research_data")
+    st.divider()
+    st.subheader('Customer Support Example')
+    st.button('Fill customer support data', on_click=fill_example_data, args=(st.session_state,'data/customer_support_example.json',), key="fill_custom_support_data")
 ## Main content
 tab1, tab2, tab3, tab4 = st.tabs(["Crew", "Agents", "Tasks", "Variables"])
 
@@ -269,18 +276,37 @@ with tab3:
                 index=selected_agent_index,
                 key=f"task_agent_{i}"
             )[0]
-            task['tools'] = st.multiselect('Tools', options=tools, format_func=lambda x: x['name'], key=f"task_tools_{i}")
+            current_tools = task.get('tools', [])
+            current_tools_ids = [tool["id"] for tool in task.get('tools', [])]
+            current_tool_names = [tool_id_to_name[tool_id] for tool_id in current_tools_ids if tool_id in tool_id_to_name]
+            selected_tools = st.multiselect('Select Tools', [tool['name'] for tool in tools], 
+                                            default=current_tool_names, 
+                                            key=f"task_tools_{i}")
+            updated_tools = []
+            for tool_name in selected_tools:
+                tool_id = tool_name_to_tool[tool_name]['id']
+                existing_tool = next((t for t in task['tools'] if t['id'] == tool_id), None)
+                if existing_tool:
+                    updated_tools.append(existing_tool)
+                else:
+                    updated_tools.append({'id': tool_id, 'parameters': []})
+            task['tools'] = updated_tools
             for tool in task['tools']:
-                if 'parameters' in tool:
-                    st.write(f'For {tool["name"]} specify the following parameters:')
-                    for parameter in tool['parameters']:
-                        task[parameter['value']] = st.text_input(parameter['name'], key=f"task_{parameter['name']}_{i}", value=task.get(parameter['name'], ''), placeholder=parameter['description'])
+                tool_id = tool['id']
+                if 'parameters' in tool_id_to_tool[tool_id]:
+                    st.write(f"Parameters for {tool_id_to_tool[tool_id]['name']}")
+                    for parameter in tool_id_to_tool[tool_id]['parameters']:
+                        param_id = parameter['id']
+                        param_name = parameter['name']
+                        param_value = next((p[param_id] for p in tool['parameters'] if param_id in p), parameter['value'])
+                        param_value = st.text_input(param_name, key=f"task_tool_{i}_{param_id}", value=param_value)
+                        tool['parameters'].append({param_id: param_value})
             st.button('➖ Remove task', on_click=remove_task, args=(i,st.session_state.tasks, ), key=f"remove_task_{i}")
     if st.session_state.warnings['no_agents']:
         st.warning('Before creating tasks, you need to create agents first.')
     else:
         st.button('➕ Add task', on_click=add_tasks, args=(len(st.session_state.tasks),st.session_state.tasks, st.session_state.warnings,))
-
+        
 with tab4:
     st.header('Variables/Inputs', divider='rainbow')
     st.info('This is optional step')
