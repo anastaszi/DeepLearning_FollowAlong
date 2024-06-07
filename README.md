@@ -10,7 +10,7 @@ pinned: false
 ---
 
 Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
-To run the app localy, follow the instrucctions below.
+To run the app locally, follow the instructions below.
 1. Install python 12.0 or higher
 
 2. Set up streamlit secret OpenAI API key
@@ -40,4 +40,10 @@ streamlit run app.py
 7. To deactivate the virtual environment
 ```
 deactivate
+```
+
+
+1. 
+```
+jupyter notebook app.ipynb
 ```

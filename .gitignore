@@ -3,3 +3,6 @@ streamlit-env/
 .venv
 __pycache__/
 .streamlit/secrets.toml
+jupyter-env/
+jupyter-env/.env
+.ipynb_checkpoints/
