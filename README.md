@@ -45,5 +45,7 @@ deactivate
 
 1. 
 ```
+pip install ipykernel
+python -m ipykernel install --user --name=my_env --display-name "Python (my_env)"
 jupyter notebook app.ipynb
 ```
