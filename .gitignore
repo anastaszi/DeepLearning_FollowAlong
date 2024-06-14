@@ -6,3 +6,5 @@ __pycache__/
 jupyter-env/
 jupyter-env/.env
 .ipynb_checkpoints/
+db/
+output/

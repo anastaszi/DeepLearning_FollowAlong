@@ -1,0 +1,57 @@
+{
+    "agents":
+    [
+        {
+            "id": "ea1",
+            "name": "Venue Coordinator",
+            "role":"Venue Coordinator",
+            "goal":"Identify and book an appropriate venue based on event requirements",
+            "backstory":"With a keen sense of space and understanding of event logistics, you excel at finding and securing the perfect venue that fits the event's theme, size, and budget constraints.",
+            "verbose":true
+        },
+        {
+            "id": "ea2",
+            "name": "Logistics Manager",
+            "role":"Logistics Manager",
+            "goal":"Manage all logistics for the event including catering and equipmen",
+            "backstory": "Organized and detail-oriented, you ensure that every logistical aspect of the event from catering to equipment setup is flawlessly executed to create a seamless experience.",
+            "allow_delegation": false,
+            "verbose":true
+        }, 
+        {
+            "id": "ea3",
+            "name": "Marketing and Communications Agent",
+            "role":"Marketing and Communications Agent",
+            "goal":"Effectively market the event and communicate with participants",
+            "backstory":"Creative and communicative, you craft compelling messages and engage with potential attendees to maximize event exposure and participation.",
+            "verbose":true
+        }
+    ],
+    "tasks": [
+        {
+            "id": "et1",
+            "name":"Look for Venues",
+            "description":"Find a venue in {event_city} that meets criteria for {event_topic}.",
+            "expected_output":"All the details of a specifically chosen venue you found to accommodate the event.",
+            "agent_id":"ea1",
+            "human_input":true
+        },
+        {
+            "id": "et2",
+            "name":"Logistics Task",
+            "description":"Coordinate catering and equipment for an event with {expected_participants} participants on {tentative_date}.",
+            "expected_output":"Confirmation of all logistics arrangements including catering and equipment setup.",
+            "agent_id":"ea2",
+            "human_input":true,
+            "async_execution": true
+        }, 
+        {
+            "id": "et3",
+            "name":"Marketing Task",
+            "description":"Promote the {event_topic} aiming to engage at least {expected_participants} potential attendees.",
+            "expected_output":"Report on marketing activities and attendee engagement formatted as markdown.",
+            "agent_id":"ea3",
+            "async_execution": true
+        }
+    ]
+}     

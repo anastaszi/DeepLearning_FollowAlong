@@ -199,7 +199,6 @@ with tab1:
     if 'results' in st.session_state:
         st.header('Results', divider='rainbow')
         st.markdown(st.session_state.results)
-
 with tab2:
     st.header('Agents', divider='rainbow')
     st.write('Agents are the entities that perform tasks in a crew. They have roles, goals, and backstories that help them understand their tasks and responsibilities.')
@@ -305,8 +304,7 @@ with tab3:
     if st.session_state.warnings['no_agents']:
         st.warning('Before creating tasks, you need to create agents first.')
     else:
-        st.button('➕ Add task', on_click=add_tasks, args=(len(st.session_state.tasks),st.session_state.tasks, st.session_state.warnings,))
-        
+        st.button('➕ Add task', on_click=add_tasks, args=(len(st.session_state.tasks),st.session_state.tasks, st.session_state.warnings,))      
 with tab4:
     st.header('Variables/Inputs', divider='rainbow')
     st.info('This is optional step')
